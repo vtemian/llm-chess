@@ -87,7 +87,7 @@ export async function requestMove(
       const { text } = await generateText({
         model: provider(modelId),
         prompt,
-        maxTokens: 500,
+        maxOutputTokens: 500,
       });
 
       const parsed = parseAIResponse(text);
