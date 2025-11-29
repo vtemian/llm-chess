@@ -59,10 +59,11 @@ export function GameDetail({ gameId, onClose }: GameDetailProps) {
 
           <div className="border-x-2 border-black p-4">
             <Chessboard
-              position={data.game.fen}
-              boardWidth={368}
-              arePiecesDraggable={false}
-              customBoardStyle={{ borderRadius: "0" }}
+              options={{
+                position: data.game.fen,
+                allowDragging: false,
+                boardStyle: { borderRadius: "0" },
+              }}
             />
           </div>
 

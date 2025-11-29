@@ -16,11 +16,12 @@ export function GameCard({ game, onClick }: GameCardProps) {
     >
       <div className="aspect-square w-full">
         <Chessboard
-          position={game.fen}
-          boardWidth={200}
-          arePiecesDraggable={false}
-          customBoardStyle={{
-            borderRadius: "0",
+          options={{
+            position: game.fen,
+            allowDragging: false,
+            boardStyle: {
+              borderRadius: "0",
+            },
           }}
         />
       </div>
