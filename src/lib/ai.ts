@@ -2,8 +2,9 @@ import { generateText, createGateway } from "ai";
 import { z } from "zod";
 
 // AI Gateway handles routing to all providers (OpenAI, Anthropic, Google, etc.)
+// Uses OIDC authentication automatically when deployed to Vercel
 const gateway = createGateway({
-  apiKey: process.env.AI_GATEWAY_API_KEY,
+  apiKey: process.env.AI_GATEWAY_API_KEY, // Optional - falls back to OIDC on Vercel
 });
 
 const MoveResponseSchema = z.object({
