@@ -5,14 +5,13 @@ import { models, tournament } from "./schema";
 const sql = neon(process.env.DATABASE_URL!);
 const db = drizzle(sql);
 
-// Model IDs in AI Gateway format: "provider/model"
+// Model IDs in AI Gateway format: "provider/model" (same as santa-market)
 const MODELS = [
   { id: "openai/gpt-4o", name: "GPT-4o", provider: "openai" },
   { id: "anthropic/claude-sonnet-4-20250514", name: "Claude Sonnet 4", provider: "anthropic" },
-  { id: "google/gemini-1.5-pro", name: "Gemini 1.5 Pro", provider: "google" },
-  { id: "groq/llama-3.1-70b-versatile", name: "Llama 3.1 70B", provider: "groq" },
-  { id: "mistral/mistral-large-latest", name: "Mistral Large", provider: "mistral" },
-  { id: "cohere/command-r-plus", name: "Command R+", provider: "cohere" },
+  { id: "google/gemini-2.0-flash", name: "Gemini 2.0 Flash", provider: "google" },
+  { id: "xai/grok-3-fast", name: "Grok 3", provider: "xai" },
+  { id: "deepseek/deepseek-chat", name: "DeepSeek V3", provider: "deepseek" },
 ];
 
 async function seed() {
