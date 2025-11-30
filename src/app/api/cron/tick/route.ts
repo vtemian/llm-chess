@@ -4,7 +4,7 @@ import { tournament, games } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { processGame, matchmake } from "@/lib/game-processor";
 
-export async function POST(request: Request) {
+async function handleTick(request: Request) {
   // Verify cron secret
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -41,4 +41,14 @@ export async function POST(request: Request) {
     gamesProcessed: activeGames.length,
     tickCount: state.tickCount + 1,
   });
+}
+
+// Vercel crons use GET requests
+export async function GET(request: Request) {
+  return handleTick(request);
+}
+
+// Allow POST for manual triggers
+export async function POST(request: Request) {
+  return handleTick(request);
 }
