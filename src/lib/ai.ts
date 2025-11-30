@@ -1,8 +1,10 @@
-import { generateText } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { generateText, createGateway } from "ai";
 import { z } from "zod";
+
+// AI Gateway handles routing to all providers (OpenAI, Anthropic, Google, etc.)
+const gateway = createGateway({
+  apiKey: process.env.AI_GATEWAY_API_KEY,
+});
 
 const MoveResponseSchema = z.object({
   move: z.string(),
@@ -61,33 +63,19 @@ export function parseAIResponse(response: string): MoveResponse | null {
   }
 }
 
-function getProvider(modelId: string) {
-  if (modelId.startsWith("gpt")) {
-    return createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  }
-  if (modelId.startsWith("claude")) {
-    return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  }
-  if (modelId.startsWith("gemini")) {
-    return createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_API_KEY });
-  }
-  throw new Error(`Unknown model provider for: ${modelId}`);
-}
-
 export async function requestMove(
   modelId: string,
   params: PromptParams,
   retries = 3
 ): Promise<MoveResponse> {
-  const provider = getProvider(modelId);
   const prompt = buildPrompt(params);
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
+      // Use AI Gateway - modelId is in format "provider/model" (e.g., "openai/gpt-4o")
       const { text } = await generateText({
-        model: provider(modelId),
+        model: gateway(modelId),
         prompt,
-        maxOutputTokens: 500,
       });
 
       const parsed = parseAIResponse(text);
