@@ -147,30 +147,39 @@ async function endGame(game: Game, result: "1-0" | "0-1" | "1/2-1/2"): Promise<v
 }
 
 export async function matchmake(): Promise<void> {
-  // Get models not in active games
+  // Get all active game pairs (both directions count as the same matchup)
   const activeGames = await db
     .select({ whiteId: games.whiteId, blackId: games.blackId })
     .from(games)
     .where(eq(games.status, "active"));
 
-  const busyModelIds = new Set(
-    activeGames.flatMap(g => [g.whiteId, g.blackId])
+  // Track active matchups (order-independent)
+  const activeMatchups = new Set(
+    activeGames.map(g => [g.whiteId, g.blackId].sort().join(":"))
   );
 
   const allModels = await db.select().from(models);
-  const idleModels = allModels.filter(m => !busyModelIds.has(m.id));
 
-  // Shuffle idle models for random matchups
-  for (let i = idleModels.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [idleModels[i], idleModels[j]] = [idleModels[j], idleModels[i]];
+  // Generate all possible unique pairs
+  const possiblePairs: Array<[typeof allModels[0], typeof allModels[0]]> = [];
+  for (let i = 0; i < allModels.length; i++) {
+    for (let j = i + 1; j < allModels.length; j++) {
+      const pairKey = [allModels[i].id, allModels[j].id].sort().join(":");
+      // Only add if this pair doesn't have an active game
+      if (!activeMatchups.has(pairKey)) {
+        possiblePairs.push([allModels[i], allModels[j]]);
+      }
+    }
   }
 
-  // Pair shuffled models, random color assignment
-  for (let i = 0; i < idleModels.length - 1; i += 2) {
-    const model1 = idleModels[i];
-    const model2 = idleModels[i + 1];
+  // Shuffle possible pairs for random selection
+  for (let i = possiblePairs.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [possiblePairs[i], possiblePairs[j]] = [possiblePairs[j], possiblePairs[i]];
+  }
 
+  // Create games for all available pairs
+  for (const [model1, model2] of possiblePairs) {
     // Randomize who plays white
     const [white, black] = Math.random() < 0.5
       ? [model1, model2]
