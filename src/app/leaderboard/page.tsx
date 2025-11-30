@@ -2,6 +2,8 @@ import { db } from "@/db";
 import { models } from "@/db/schema";
 import { desc } from "drizzle-orm";
 
+export const dynamic = "force-dynamic";
+
 export default async function LeaderboardPage() {
   const leaderboard = await db
     .select()
