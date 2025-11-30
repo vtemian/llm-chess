@@ -7,19 +7,25 @@ import { calculateNewElo, outcomeFromResult } from "./elo";
 import type { Game } from "@/db/schema";
 
 export async function processGame(game: Game): Promise<void> {
-  const turn = getTurn(game.fen);
-  const modelId = turn === "w" ? game.whiteId : game.blackId;
+  // Re-fetch game to check if still active (protect against concurrent ticks)
+  const [currentGame] = await db.select().from(games).where(eq(games.id, game.id));
+  if (!currentGame || currentGame.status !== "active") {
+    return; // Game already completed or doesn't exist
+  }
+
+  const turn = getTurn(currentGame.fen);
+  const modelId = turn === "w" ? currentGame.whiteId : currentGame.blackId;
   const color = turn === "w" ? "white" : "black";
 
   // Get recent moves for context
   const recentMoves = await db
     .select({ moveSan: moves.moveSan })
     .from(moves)
-    .where(eq(moves.gameId, game.id))
+    .where(eq(moves.gameId, currentGame.id))
     .orderBy(moves.moveNumber)
     .limit(10);
 
-  const legalMoves = getLegalMoves(game.fen);
+  const legalMoves = getLegalMoves(currentGame.fen);
 
   let moveResponse;
   let errorContext: string | undefined;
@@ -27,14 +33,14 @@ export async function processGame(game: Game): Promise<void> {
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       moveResponse = await requestMove(modelId, {
-        fen: game.fen,
+        fen: currentGame.fen,
         color: color as "white" | "black",
         legalMoves,
         lastMoves: recentMoves.map(m => m.moveSan),
         errorContext,
       });
 
-      if (validateMove(game.fen, moveResponse.move)) {
+      if (validateMove(currentGame.fen, moveResponse.move)) {
         break;
       }
 
@@ -44,29 +50,29 @@ export async function processGame(game: Game): Promise<void> {
     } catch {
       if (attempt === 3) {
         // Forfeit
-        await forfeitGame(game, modelId);
+        await forfeitGame(currentGame, modelId);
         return;
       }
     }
   }
 
   if (!moveResponse) {
-    await forfeitGame(game, modelId);
+    await forfeitGame(currentGame, modelId);
     return;
   }
 
   // Apply move
-  const result = applyMove(game.fen, moveResponse.move);
+  const result = applyMove(currentGame.fen, moveResponse.move);
   if (!result) {
-    await forfeitGame(game, modelId);
+    await forfeitGame(currentGame, modelId);
     return;
   }
 
-  const moveNumber = getMoveNumber(game.fen);
+  const moveNumber = getMoveNumber(currentGame.fen);
 
   // Store move
   await db.insert(moves).values({
-    gameId: game.id,
+    gameId: currentGame.id,
     modelId,
     moveNumber,
     moveSan: moveResponse.move,
@@ -78,12 +84,12 @@ export async function processGame(game: Game): Promise<void> {
   await db
     .update(games)
     .set({ fen: result.fen, pgn: result.pgn })
-    .where(eq(games.id, game.id));
+    .where(eq(games.id, currentGame.id));
 
   // Check for game end
   if (isGameOver(result.fen)) {
     const gameResult = getGameResult(result.fen);
-    await endGame(game, gameResult!);
+    await endGame(currentGame, gameResult!);
   }
 }
 
@@ -93,6 +99,12 @@ async function forfeitGame(game: Game, forfeitingModelId: string): Promise<void>
 }
 
 async function endGame(game: Game, result: "1-0" | "0-1" | "1/2-1/2"): Promise<void> {
+  // Re-check game is still active to prevent double-counting from race conditions
+  const [currentGame] = await db.select().from(games).where(eq(games.id, game.id));
+  if (!currentGame || currentGame.status !== "active") {
+    return; // Already ended by another tick
+  }
+
   // Get current ratings
   const [white] = await db.select().from(models).where(eq(models.id, game.whiteId));
   const [black] = await db.select().from(models).where(eq(models.id, game.blackId));
