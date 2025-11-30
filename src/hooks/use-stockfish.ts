@@ -10,14 +10,15 @@ interface StockfishState {
 
 export function useStockfish(fen: string, targetDepth = 12) {
   const workerRef = useRef<Worker | null>(null);
+  const fenRef = useRef(fen); // Track current FEN for use in callbacks
   const [state, setState] = useState<StockfishState>({
     evaluation: null,
     depth: 0,
     isReady: false,
   });
 
-  // Determine if it's black's turn from FEN
-  const isBlackTurn = fen.split(" ")[1] === "b";
+  // Keep fenRef in sync with current fen
+  fenRef.current = fen;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -59,8 +60,9 @@ export function useStockfish(fen: string, targetDepth = 12) {
             // Stockfish returns eval from side-to-move perspective
             // We want it always from white's perspective (positive = white winning)
             // So flip the sign when it's black's turn
-            const fenParts = fen.split(" ");
-            const isBlack = fenParts[1] === "b";
+            // Use fenRef.current to get the current FEN (not stale closure value)
+            const currentFen = fenRef.current;
+            const isBlack = currentFen.split(" ")[1] === "b";
             const normalizedEval = isBlack ? -evaluation : evaluation;
             setState((s) => ({ ...s, evaluation: normalizedEval, depth }));
           }
