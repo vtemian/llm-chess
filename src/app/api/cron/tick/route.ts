@@ -30,10 +30,10 @@ export async function POST(request: Request) {
   // Matchmake idle models
   await matchmake();
 
-  // Increment tick count
+  // Increment tick count and update lastTickAt
   await db
     .update(tournament)
-    .set({ tickCount: state.tickCount + 1 })
+    .set({ tickCount: state.tickCount + 1, lastTickAt: new Date() })
     .where(eq(tournament.id, 1));
 
   return NextResponse.json({

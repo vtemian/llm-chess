@@ -4,11 +4,7 @@ import { useEffect, useState } from "react";
 import { GameCard } from "./game-card";
 import type { Game } from "@/db/schema";
 
-interface GameGridProps {
-  onSelectGame: (gameId: string) => void;
-}
-
-export function GameGrid({ onSelectGame }: GameGridProps) {
+export function GameGrid() {
   const [games, setGames] = useState<Game[]>([]);
 
   useEffect(() => {
@@ -34,11 +30,7 @@ export function GameGrid({ onSelectGame }: GameGridProps) {
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
       {games.map((game) => (
-        <GameCard
-          key={game.id}
-          game={game}
-          onClick={() => onSelectGame(game.id)}
-        />
+        <GameCard key={game.id} game={game} />
       ))}
     </div>
   );

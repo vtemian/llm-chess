@@ -145,18 +145,28 @@ export async function matchmake(): Promise<void> {
     activeGames.flatMap(g => [g.whiteId, g.blackId])
   );
 
-  const allModels = await db.select().from(models).orderBy(models.elo);
+  const allModels = await db.select().from(models);
   const idleModels = allModels.filter(m => !busyModelIds.has(m.id));
 
-  // Pair adjacent models by ELO
+  // Shuffle idle models for random matchups
+  for (let i = idleModels.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [idleModels[i], idleModels[j]] = [idleModels[j], idleModels[i]];
+  }
+
+  // Pair shuffled models, random color assignment
   for (let i = 0; i < idleModels.length - 1; i += 2) {
     const model1 = idleModels[i];
     const model2 = idleModels[i + 1];
 
-    // Alternate colors (simple: lower ELO plays white)
+    // Randomize who plays white
+    const [white, black] = Math.random() < 0.5
+      ? [model1, model2]
+      : [model2, model1];
+
     await db.insert(games).values({
-      whiteId: model1.id,
-      blackId: model2.id,
+      whiteId: white.id,
+      blackId: black.id,
     });
   }
 }

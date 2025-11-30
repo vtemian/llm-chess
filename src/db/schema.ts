@@ -42,6 +42,8 @@ export const tournament = pgTable("tournament", {
   id: integer("id").primaryKey().default(1),
   status: tournamentStatusEnum("status").notNull().default("stopped"),
   tickCount: integer("tick_count").notNull().default(0),
+  tickIntervalSec: integer("tick_interval_sec").notNull().default(60),
+  lastTickAt: timestamp("last_tick_at"),
   startedAt: timestamp("started_at"),
 });
 

@@ -76,6 +76,7 @@ export async function requestMove(
       const { text } = await generateText({
         model: gateway(modelId),
         prompt,
+        temperature: 0.7, // Add variety to moves
       });
 
       const parsed = parseAIResponse(text);
