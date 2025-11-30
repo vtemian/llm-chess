@@ -16,6 +16,9 @@ export function useStockfish(fen: string, targetDepth = 12) {
     isReady: false,
   });
 
+  // Determine if it's black's turn from FEN
+  const isBlackTurn = fen.split(" ")[1] === "b";
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -53,7 +56,13 @@ export function useStockfish(fen: string, targetDepth = 12) {
           }
 
           if (evaluation !== null) {
-            setState((s) => ({ ...s, evaluation, depth }));
+            // Stockfish returns eval from side-to-move perspective
+            // We want it always from white's perspective (positive = white winning)
+            // So flip the sign when it's black's turn
+            const fenParts = fen.split(" ");
+            const isBlack = fenParts[1] === "b";
+            const normalizedEval = isBlack ? -evaluation : evaluation;
+            setState((s) => ({ ...s, evaluation: normalizedEval, depth }));
           }
         }
       }
